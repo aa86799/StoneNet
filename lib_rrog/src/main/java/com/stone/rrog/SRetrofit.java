@@ -82,7 +82,7 @@ public class SRetrofit {
             retrofit = new Retrofit.Builder()
                     .baseUrl(baseUrl)
                     .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-                    .addConverterFactory(GsonConverterFactory.create())
+//                    .addConverterFactory(GsonConverterFactory.create())
                     .client(getInstance().getClient(context))
                     .build();
             getInstance().mRetrofitMap.put(baseUrl, retrofit);

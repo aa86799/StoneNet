@@ -1,5 +1,6 @@
 package com.stone.stonenet.rx;
 
+import com.stone.stonenet.util.NetInfoUtil;
 import com.stone.stonenet.util.ShowUtils;
 
 import java.net.ConnectException;

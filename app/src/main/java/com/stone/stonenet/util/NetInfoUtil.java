@@ -1,4 +1,4 @@
-package com.stone.stonenet.rx;
+package com.stone.stonenet.util;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
