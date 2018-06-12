@@ -63,7 +63,7 @@ public class SRetrofit {
     }
 
     private static class Builder {
-        private static SRetrofit instance = new SRetrofit();
+        private static final SRetrofit instance = new SRetrofit();
     }
 
     private SRetrofit() {
