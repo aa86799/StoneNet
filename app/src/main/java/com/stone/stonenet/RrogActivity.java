@@ -1,9 +1,7 @@
 package com.stone.stonenet;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
@@ -13,7 +11,6 @@ import com.stone.stonenet.api.Api;
 import com.stone.stonenet.bean.BaseRxBean;
 import com.stone.stonenet.bean.MovieBean;
 import com.stone.stonenet.bean.SubjectsBean;
-import com.stone.stonenet.rx.BaseRxBeanUtil;
 import com.stone.stonenet.rx.RxCompatException;
 import com.stone.stonenet.rx.RxUtil;
 
@@ -23,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.reactivex.Observable;
-import io.reactivex.functions.Consumer;
+import io.reactivex.disposables.CompositeDisposable;
 import okhttp3.MultipartBody;
 import okhttp3.ResponseBody;
 import retrofit2.http.Part;
@@ -41,7 +38,9 @@ public class RrogActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
+        RxUtil.addSub(this.getClass(), new CompositeDisposable());
+
 //        loadMovies1();
 //        loadMovies2();
 //        loadMovies3();
@@ -50,15 +49,15 @@ public class RrogActivity extends AppCompatActivity {
 
     private void loadMovies1() {
         Api.getMovieApiService().getTopMovies1(0, 5)
-            .compose(RxUtil.netUI())
-            .subscribe(movie -> {
-                List<SubjectsBean> list = movie.getSubjects();
-                for (SubjectsBean sub : list) {
-                    Log.d("stone1", "onNext: " + sub.getId() + "," + sub.getYear() + "," + sub.getTitle());
-                }
-            }, new RxCompatException<>(e -> {
-                e.printStackTrace();
-            }));
+                .compose(RxUtil.netUI())
+                .subscribe(movie -> {
+                    List<SubjectsBean> list = movie.getSubjects();
+                    for (SubjectsBean sub : list) {
+                        Log.d("stone1", "onNext: " + sub.getId() + "," + sub.getYear() + "," + sub.getTitle());
+                    }
+                }, new RxCompatException<>(e -> {
+                    e.printStackTrace();
+                }));
     }
 
     private void loadMovies2() {
@@ -75,7 +74,7 @@ public class RrogActivity extends AppCompatActivity {
     }
 
     private void loadMovies3() {
-        Api.getMovieApiService().getTopMovies3("top250",20, 10)
+        Api.getMovieApiService().getTopMovies3("top250", 20, 10)
                 .compose(RxUtil.netUIFb())
                 .subscribe(movie -> {
                     List<SubjectsBean> list = movie.getSubjects();
@@ -121,20 +120,22 @@ public class RrogActivity extends AppCompatActivity {
      * 对通用api方法 结合 rxjava 再次封装，方便使用
      */
     private <T> void get(HttpMethodType type, String url, Map<String, Object> params,
-                                            final Class<T> clz, final ILoadSuccess<T> loadSuccess) {
+                         final Class<T> clz, final ILoadSuccess<T> loadSuccess) {
 //        Api.getApiService().get(url, params)
-        generateObservable(type, url, params)
-            .compose(RxUtil.netUI())
-            .subscribe(responseBody -> {
-                StringReader reader = new StringReader(responseBody.string());
-                JsonReader jsonReader = new JsonReader(reader);
-                T data = new Gson().fromJson(jsonReader, clz);
-                if (loadSuccess != null) {
-                    loadSuccess.onSuccessed(data);
-                }
-            }, new RxCompatException<>(e -> {
-                e.printStackTrace();
-            }));
+        RxUtil.addSub(RrogActivity.class,
+                generateObservable(type, url, params)
+                        .compose(RxUtil.netUI())
+                        .subscribe(responseBody -> {
+                            StringReader reader = new StringReader(responseBody.string());
+                            JsonReader jsonReader = new JsonReader(reader);
+                            T data = new Gson().fromJson(jsonReader, clz);
+                            if (loadSuccess != null) {
+                                loadSuccess.onSuccessed(data);
+                            }
+                        }, new RxCompatException<>(e -> {
+                            e.printStackTrace();
+                        }))
+        );
     }
 
     enum HttpMethodType {
@@ -172,10 +173,10 @@ public class RrogActivity extends AppCompatActivity {
     }
 
     /*
-    * 如果对 BaseRxBean的子类进行请求；
-    */
+     * 如果对 BaseRxBean的子类进行请求；
+     */
     private <T extends BaseRxBean> void get2(String url, Map<String, Object> params, final Class<T> clz,
-                                            final ILoadSuccess<T> loadSuccess, final ILoadError loadError) {
+                                             final ILoadSuccess<T> loadSuccess, final ILoadError loadError) {
         Api.getApiService().get(url, params)
                 .compose(RxUtil.netUI())
                 .subscribe(responseBody -> {
@@ -201,4 +202,10 @@ public class RrogActivity extends AppCompatActivity {
         void onError(String message);
     }
 
+    @Override
+    protected void onDestroy() {
+        RxUtil.cancelAllSub(getClass());
+
+        super.onDestroy();
+    }
 }

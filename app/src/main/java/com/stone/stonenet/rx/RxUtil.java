@@ -12,7 +12,7 @@ import io.reactivex.FlowableTransformer;
 import io.reactivex.Observable;
 import io.reactivex.ObservableTransformer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
@@ -66,9 +66,9 @@ public class RxUtil {
                 .observeOn(AndroidSchedulers.mainThread());
     }
 
-    private static volatile Map<String, Set<WeakReference<CompositeDisposable>>> sMap;
+    private static volatile Map<String, Set<WeakReference<Disposable>>> sMap;
 
-    private static Map<String, Set<WeakReference<CompositeDisposable>>> getSubMap() {
+    private static Map<String, Set<WeakReference<Disposable>>> getSubMap() {
         if (sMap == null) {
             synchronized (RxUtil.class) {
                 if (sMap == null) {
@@ -80,40 +80,40 @@ public class RxUtil {
     }
 
     /**
-     * 根据clz 缓存对应的 CompositeDisposable - Set
+     * 根据clz 缓存对应的 Disposable - Set
      *
      * @param clz
      * @return
      */
     public static void addSubSet(Class clz) {
-        Set<WeakReference<CompositeDisposable>> set = new HashSet<>();
+        Set<WeakReference<Disposable>> set = new HashSet<>();
         getSubMap().put(clz.toString(), set);
     }
 
     /**
-     * 缓存CompositeDisposable
+     * 缓存Disposable
      *
      * @param clz
      * @param sub
      */
-    public static void addSub(Class clz, CompositeDisposable sub) {
-        Set<WeakReference<CompositeDisposable>> set = getSubMap().get(clz.toString());
+    public static void addSub(Class clz, Disposable sub) {
+        Set<WeakReference<Disposable>> set = getSubMap().get(clz.toString());
         if (set != null) {
             set.add(new WeakReference<>(sub));
         }
     }
 
     /**
-     * 取消clz 对应的 CompositeDisposable
+     * 取消clz 对应的 Disposable
      *
      * @param clz
      */
     public static void cancelAllSub(Class clz) {
         final String tag = clz.toString();
-        Set<WeakReference<CompositeDisposable>> set = getSubMap().get(tag);
+        Set<WeakReference<Disposable>> set = getSubMap().get(tag);
         if (set != null) {
-            for (WeakReference<CompositeDisposable> next : set) {
-                CompositeDisposable sub = next.get();
+            for (WeakReference<Disposable> next : set) {
+                Disposable sub = next.get();
                 if (sub != null && !sub.isDisposed()) {
                     sub.dispose();
                 }
@@ -129,7 +129,7 @@ public class RxUtil {
      * @param disposable
      * @return true 是
      */
-    public static boolean isSubscribing(CompositeDisposable disposable) {
+    public static boolean isSubscribing(Disposable disposable) {
         return disposable != null && !disposable.isDisposed();
     }
 
@@ -138,8 +138,28 @@ public class RxUtil {
      *
      * @param disposable
      */
-    public static void unsubscribe(CompositeDisposable disposable) {
+    public static void unsubscribe(Disposable disposable) {
         if (disposable != null && !disposable.isDisposed()) disposable.dispose();
+    }
+
+    /**
+     * 取消指定的class 中的订阅
+     * @param clz
+     * @param disposable
+     */
+    public static void unsubscribe(Class clz, Disposable disposable) {
+        final String tag = clz.toString();
+        Set<WeakReference<Disposable>> set = getSubMap().get(tag);
+        if (set != null) {
+            for (WeakReference<Disposable> next : set) {
+                Disposable dispo = next.get();
+                if (dispo != null && !dispo.isDisposed()) {
+                    unsubscribe(dispo);
+                }
+            }
+            set.clear();
+            getSubMap().remove(tag);
+        }
     }
 
     /**
@@ -172,4 +192,5 @@ public class RxUtil {
     public static <T, R> Observable<R> opDb(Function<T, R> function, T t) {
         return Observable.create(e -> e.onNext(function.apply(t)));
     }
+
 }
