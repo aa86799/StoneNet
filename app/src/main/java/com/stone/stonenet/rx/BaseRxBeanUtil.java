@@ -7,10 +7,14 @@ import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import io.reactivex.FlowableTransformer;
 import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
 import io.reactivex.ObservableTransformer;
+import io.reactivex.Observer;
+import io.reactivex.functions.Function;
 
 /**
- * desc     :
+ * desc     : 适用于 直接返回对应 javaBean 的场景， 不适用 通用场景的 ApiService
+ *              当然也可以修改下，直接一级用 ResponseBody，然后转对应 Bean，再判断
  * author   : stone
  * homepage : http://stone86.top
  * email    : aa86799@163.com
@@ -36,7 +40,12 @@ public class BaseRxBeanUtil {
                 .just(new TestBean()) //<T>  T must implements Serializable
                 .compose(RxUtil.netUI()) //线程切换
                 .compose(BaseRxBeanUtil.handleResult()) //结果统一处理
-                .subscribe(result -> { /* do some things. */ },
+                .onErrorReturn(throwable -> null)
+                .subscribe(result -> { /* do some things. */
+                            if (result != null) {
+
+                            }
+                        },
                         throwable -> new RxCompatException<>(e -> {e.printStackTrace(); /* do error things */})
                 );
     }
